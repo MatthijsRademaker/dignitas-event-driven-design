@@ -17,18 +17,18 @@
 - `exercise-2-saga`: reserved for saga state machine (exercise 2).
 
 ## Solution layout
-- Aspire solution root: `src/src/EDA`.
-- AppHost: `src/src/EDA/EDA.AppHost/AppHost.cs` (wires Postgres + RabbitMQ, server, Vite frontend, publishes `wwwroot`).
-- Server: `src/src/EDA/EDA.Server/`.
-- Frontend (Vite/React): `src/src/EDA/frontend/`.
+- Aspire solution root: `src/EDA`.
+- AppHost: `src/EDA/EDA.AppHost/AppHost.cs` (wires Postgres + RabbitMQ, server, Vite frontend, publishes `wwwroot`).
+- Server: `src/EDA/EDA.Server/`.
+- Frontend (Vite/React): `src/EDA/frontend/`.
 
 ## Running the app
-- Use `aspire start` from `src/src/EDA` (apphost path is `src/src/EDA/aspire.config.json`).
-- Frontend API proxy reads `SERVER_HTTPS`/`SERVER_HTTP` (set by Aspire); avoid hardcoding API endpoints in `src/src/EDA/frontend/vite.config.ts`.
+- Use `aspire start` from `src/EDA` (apphost path is `src/EDA/aspire.config.json`).
+- Frontend API proxy reads `SERVER_HTTPS`/`SERVER_HTTP` (set by Aspire); avoid hardcoding API endpoints in `src/EDA/frontend/vite.config.ts`.
 
 ## Tooling constraints
 - .NET targets `net10.0` in `EDA.AppHost` and `EDA.Server`.
-- Frontend Node engine: `^20.19.0 || >=22.12.0` (see `src/src/EDA/frontend/package.json`).
+- Frontend Node engine: `^20.19.0 || >=22.12.0` (see `src/EDA/frontend/package.json`).
 
 ## Presentation
 - Slide deck lives in `presentation/` (Slidev). Use `pnpm install` + `pnpm dev`.

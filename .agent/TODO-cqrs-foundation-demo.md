@@ -12,9 +12,9 @@ Lay the foundation for the CQRS inconsistency demo using Aspire-managed RabbitMQ
 ## Implementation steps
 
 1. AppHost foundation
-- Update `src/src/EDA/EDA.AppHost/EDA.AppHost.csproj`
+- Update `src/EDA/EDA.AppHost/EDA.AppHost.csproj`
 - Add `Aspire.Hosting.PostgreSQL` and `Aspire.Hosting.RabbitMQ`
-- Update `src/src/EDA/EDA.AppHost/AppHost.cs`
+- Update `src/EDA/EDA.AppHost/AppHost.cs`
 - Add:
   - `builder.AddPostgres("postgres")`
   - `.AddDatabase("callcenter")`
@@ -23,7 +23,7 @@ Lay the foundation for the CQRS inconsistency demo using Aspire-managed RabbitMQ
 - Keep the Vite frontend and `PublishWithContainerFiles`
 
 2. Server dependencies and bootstrapping
-- Update `src/src/EDA/EDA.Server/EDA.Server.csproj`
+- Update `src/EDA/EDA.Server/EDA.Server.csproj`
 - Add:
   - `Aspire.Npgsql.EntityFrameworkCore.PostgreSQL`
   - `MassTransit`
@@ -82,7 +82,7 @@ Lay the foundation for the CQRS inconsistency demo using Aspire-managed RabbitMQ
   - suggestions
 
 8. Frontend demo UI
-- Replace the current starter UI in `src/src/EDA/frontend/src/App.tsx`
+- Replace the current starter UI in `src/EDA/frontend/src/App.tsx`
 - Build one screen with:
   - transcript entry form
   - `Save and publish` action
@@ -101,8 +101,8 @@ Lay the foundation for the CQRS inconsistency demo using Aspire-managed RabbitMQ
   - `DemoSeeder`
 
 10. Verification
-- `dotnet build` from `src/src/EDA`
-- `npm run build` from `src/src/EDA/frontend`
+- `dotnet build` from `src/EDA`
+- `npm run build` from `src/EDA/frontend`
 - Run with:
   - `"/Users/matthijsrademaker/.aspire/bin/aspire" start`
 - Manual checks:
