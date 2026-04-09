@@ -35,6 +35,7 @@ public sealed class DemoSeeder(IServiceScopeFactory scopeFactory, ILogger<DemoSe
         if (reset)
         {
             db.OutboxMessages.RemoveRange(db.OutboxMessages);
+            db.ChatMessages.RemoveRange(db.ChatMessages);
             db.Suggestions.RemoveRange(db.Suggestions);
             db.AgentDashboards.RemoveRange(db.AgentDashboards);
             db.TranscriptSegments.RemoveRange(db.TranscriptSegments);
