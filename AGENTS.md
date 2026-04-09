@@ -10,9 +10,15 @@
 - Exercise 1 (Outbox): add outbox storage + `OutboxDispatcher` so `TranscriptReceived` publishes reliably and dashboards update after dispatch.
 - Exercise 2 (Saga): `CallResolutionSaga` coordinates `CallStarted` -> `TranscriptStreaming` -> `ResolutionDrafted` -> `CustomerConfirmationRequested` -> `CallResolved`, with compensations like `FollowUpScheduled` on `CallerDisconnected` or timeouts.
 
+## Branches
+- `main`: full solution (latest). Use for combined presentation + exercises.
+- `demo-cqrs`: CQRS-only demo where publish failures leave projections stale.
+- `exercise-1-outbox`: outbox pattern implementation for exercise 1.
+- `exercise-2-saga`: reserved for saga state machine (exercise 2).
+
 ## Solution layout
 - Aspire solution root: `src/src/EDA`.
-- AppHost: `src/src/EDA/EDA.AppHost/AppHost.cs` (wires Redis, server, Vite frontend, publishes `wwwroot`).
+- AppHost: `src/src/EDA/EDA.AppHost/AppHost.cs` (wires Postgres + RabbitMQ, server, Vite frontend, publishes `wwwroot`).
 - Server: `src/src/EDA/EDA.Server/`.
 - Frontend (Vite/React): `src/src/EDA/frontend/`.
 
