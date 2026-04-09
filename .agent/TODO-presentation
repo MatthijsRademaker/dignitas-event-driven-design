@@ -1,0 +1,61 @@
+Event-Driven Design deck TODO (90 min)
+
+Audience
+- Intermediate developers (4-10+ years)
+- Wants both conceptual clarity and realistic production tradeoffs
+
+Constraints
+- Use pseudocode for general patterns
+- Show a few Dotnet samples from customer repo (provided later)
+- Use placeholder tag for code snippets: TODO-VGZ-CODE
+- Custom theme will be provided later
+
+Primary scenario (call center)
+- Agent receives phone call
+- Agent subscribes to TranscriptReceived events
+- Saga coordinates deterministic flow
+- State written to Redis
+- Transcripts sent to LLM suggestions pipeline
+- Pipeline raises SuggestionsGenerated events
+- Suggestions streamed to frontend
+
+Key value points to emphasize
+- Telemetry is easier with events
+- Event sourcing and replayability: filter by event type
+- Flexibility of async, decoupled flows
+
+Downfalls to emphasize
+- Complexity grows quickly even in small repo
+- Naming pitfalls: <EventNameConsumer> vs <ResultingEvent>
+- Observability and ordering pitfalls
+- Event schema versioning pressure
+
+AI event storming exercise
+- 5-10 min interactive segment
+- Prompt: map call center flow into events, commands, read models
+- Output: quick event list and a projected read model
+
+Proposed outline (90 min)
+- 0-5 min: hook, goals, call center story intro
+- 5-20 min: core concepts (events, commands, state, causality)
+- 20-35 min: modeling (event storming, event contracts, language)
+- 35-55 min: architecture patterns (sagas, choreography, streams)
+- 55-70 min: implementation concerns (ordering, idempotency, retries)
+- 70-80 min: ops (telemetry, replay, event sourcing, filters)
+- 80-87 min: downfalls and complexity tradeoffs
+- 87-90 min: wrap-up and resources
+
+Visuals to build
+- Call center end-to-end flow diagram
+- Saga orchestration timeline
+- Event stream with filter and replay
+- Telemetry view: trace across services
+- Naming comparison slide
+
+Provided artifacts
+- Tree structure reference: tree-structure-vgz.md
+- Event flow diagrams: event-flow-vgz.md
+
+Inputs needed
+- Dotnet sample code snippets from customer repo
+- Custom theme assets and usage details

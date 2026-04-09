@@ -1,0 +1,21 @@
+@Server_HostAddress = http://localhost:5592
+
+GET {{Server_HostAddress}}/api/demo/state
+Accept: application/json
+
+###
+
+POST {{Server_HostAddress}}/api/demo/transcripts
+Content-Type: application/json
+
+{
+  "speaker": "Caller",
+  "text": "I need a refund for the last charge.",
+  "simulatePublishFailure": true
+}
+
+###
+
+POST {{Server_HostAddress}}/api/demo/reset
+
+###
