@@ -35,15 +35,3 @@ public sealed class SuggestionEntry
     public string Category { get; set; } = string.Empty;
     public DateTimeOffset CreatedAt { get; set; }
 }
-
-public sealed class OutboxMessage
-{
-    public Guid Id { get; set; }
-    public DateTimeOffset OccurredAt { get; set; }
-    public string MessageType { get; set; } = string.Empty;
-    public string Payload { get; set; } = string.Empty;
-    public string Status { get; set; } = OutboxStatuses.Pending;
-    public int Attempts { get; set; }
-    public string? LastError { get; set; }
-    public DateTimeOffset? PublishedAt { get; set; }
-}

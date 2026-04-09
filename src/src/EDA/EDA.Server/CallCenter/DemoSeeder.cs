@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EDA.Server.CallCenter;
 
-public sealed class DemoSeeder(IServiceScopeFactory scopeFactory, ILogger<DemoSeeder> logger) : IHostedService
+public sealed class DemoSeeder(IServiceScopeFactory scopeFactory) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -21,20 +21,8 @@ public sealed class DemoSeeder(IServiceScopeFactory scopeFactory, ILogger<DemoSe
 
         await db.Database.EnsureCreatedAsync(cancellationToken);
 
-        try
-        {
-            await db.OutboxMessages.AnyAsync(cancellationToken);
-        }
-        catch (Exception)
-        {
-            logger.LogWarning("Database schema missing outbox table. Recreating demo database.");
-            await db.Database.EnsureDeletedAsync(cancellationToken);
-            await db.Database.EnsureCreatedAsync(cancellationToken);
-        }
-
         if (reset)
         {
-            db.OutboxMessages.RemoveRange(db.OutboxMessages);
             db.Suggestions.RemoveRange(db.Suggestions);
             db.AgentDashboards.RemoveRange(db.AgentDashboards);
             db.TranscriptSegments.RemoveRange(db.TranscriptSegments);

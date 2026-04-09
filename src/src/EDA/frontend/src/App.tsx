@@ -35,13 +35,6 @@ type DemoState = {
   transcripts: TranscriptView[];
   dashboard: DashboardView | null;
   suggestions: SuggestionView[];
-  outbox: OutboxSnapshot;
-};
-
-type OutboxSnapshot = {
-  pending: number;
-  published: number;
-  failed: number;
 };
 
 type TranscriptRecordResult = {
@@ -209,19 +202,6 @@ function App() {
             <span className="meta-sub">
               {consistency?.inSync ? 'Projections are aligned.' : 'Projections are stale.'}
             </span>
-          </div>
-          <div className="meta-card">
-            <span className="meta-label">Outbox</span>
-            <span className="meta-value">
-              {state?.outbox
-                ? `${state.outbox.pending} pending`
-                : 'Loading...'}
-            </span>
-            {state?.outbox && (
-              <span className="meta-sub">
-                {state.outbox.published} published · {state.outbox.failed} failed
-              </span>
-            )}
           </div>
         </div>
       </header>
