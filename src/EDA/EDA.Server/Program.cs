@@ -15,6 +15,7 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddMassTransit(x =>
 {
+    x.AddConsumer<ChatProjector>();
     x.AddConsumer<DashboardProjector>();
     x.AddConsumer<SuggestionProjector>();
 
@@ -65,6 +66,12 @@ api.MapGet("state", async (CallCenterDbContext db, Guid? callId, CancellationTok
         .OrderBy(segment => segment.ReceivedAt)
         .ToListAsync(ct);
 
+    var chatMessages = await db.ChatMessages
+        .AsNoTracking()
+        .Where(entry => entry.CallId == activeCallId)
+        .OrderBy(entry => entry.ReceivedAt)
+        .ToListAsync(ct);
+
     var dashboard = await db.AgentDashboards
         .AsNoTracking()
         .FirstOrDefaultAsync(projection => projection.CallId == activeCallId, ct);
@@ -75,7 +82,7 @@ api.MapGet("state", async (CallCenterDbContext db, Guid? callId, CancellationTok
         .OrderByDescending(entry => entry.CreatedAt)
         .ToListAsync(ct);
 
-    var state = DemoState.From(call, transcripts, dashboard, suggestions);
+    var state = DemoState.From(call, transcripts, chatMessages, dashboard, suggestions);
     return Results.Ok(state);
 });
 

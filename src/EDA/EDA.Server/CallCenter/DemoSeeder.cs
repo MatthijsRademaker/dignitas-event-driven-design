@@ -23,6 +23,7 @@ public sealed class DemoSeeder(IServiceScopeFactory scopeFactory) : IHostedServi
 
         if (reset)
         {
+            db.ChatMessages.RemoveRange(db.ChatMessages);
             db.Suggestions.RemoveRange(db.Suggestions);
             db.AgentDashboards.RemoveRange(db.AgentDashboards);
             db.TranscriptSegments.RemoveRange(db.TranscriptSegments);
