@@ -16,22 +16,19 @@ public sealed record DemoState(
     CallSummary? Call,
     IReadOnlyList<TranscriptView> Transcripts,
     DashboardView? Dashboard,
-    IReadOnlyList<SuggestionView> Suggestions,
-    OutboxSnapshot Outbox)
+    IReadOnlyList<SuggestionView> Suggestions)
 {
     public static DemoState From(
         CallSession? call,
         IReadOnlyList<TranscriptSegment> transcripts,
         AgentDashboardProjection? dashboard,
-        IReadOnlyList<SuggestionEntry> suggestions,
-        OutboxSnapshot outbox)
+        IReadOnlyList<SuggestionEntry> suggestions)
     {
         return new DemoState(
             CallSummary.From(call),
             transcripts.Select(TranscriptView.From).ToList(),
             DashboardView.From(dashboard),
-            suggestions.Select(SuggestionView.From).ToList(),
-            outbox);
+            suggestions.Select(SuggestionView.From).ToList());
     }
 }
 
@@ -95,36 +92,5 @@ public sealed record SuggestionView(
     public static SuggestionView From(SuggestionEntry entry)
     {
         return new SuggestionView(entry.Id, entry.Text, entry.Category, entry.CreatedAt);
-    }
-}
-
-public sealed record OutboxSnapshot(
-    int Pending,
-    int Published,
-    int Failed)
-{
-    public static OutboxSnapshot From(IEnumerable<OutboxMessage> messages)
-    {
-        var pending = 0;
-        var published = 0;
-        var failed = 0;
-
-        foreach (var message in messages)
-        {
-            switch (message.Status)
-            {
-                case OutboxStatuses.Pending:
-                    pending++;
-                    break;
-                case OutboxStatuses.Published:
-                    published++;
-                    break;
-                case OutboxStatuses.Failed:
-                    failed++;
-                    break;
-            }
-        }
-
-        return new OutboxSnapshot(pending, published, failed);
     }
 }

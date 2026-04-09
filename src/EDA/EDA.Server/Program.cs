@@ -38,7 +38,6 @@ builder.Services.AddMassTransit(x =>
 builder.Services.AddScoped<TranscriptRecorder>();
 builder.Services.AddSingleton<DemoSeeder>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DemoSeeder>());
-builder.Services.AddHostedService<OutboxDispatcher>();
 
 var app = builder.Build();
 
@@ -76,15 +75,7 @@ api.MapGet("state", async (CallCenterDbContext db, Guid? callId, CancellationTok
         .OrderByDescending(entry => entry.CreatedAt)
         .ToListAsync(ct);
 
-    var outboxMessages = await db.OutboxMessages
-        .AsNoTracking()
-        .Where(message => message.Status == OutboxStatuses.Pending
-            || message.Status == OutboxStatuses.Published
-            || message.Status == OutboxStatuses.Failed)
-        .ToListAsync(ct);
-
-    var outbox = OutboxSnapshot.From(outboxMessages);
-    var state = DemoState.From(call, transcripts, dashboard, suggestions, outbox);
+    var state = DemoState.From(call, transcripts, dashboard, suggestions);
     return Results.Ok(state);
 });
 
