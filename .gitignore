@@ -5,6 +5,7 @@ dist
 .vite-inspect
 .remote-assets
 components.d.ts
+**/.vite/
 bin/
 obj/
 **/bin/
