@@ -15,6 +15,7 @@ public sealed record TranscriptRecordResult(
 public sealed record DemoState(
     CallSummary? Call,
     IReadOnlyList<TranscriptView> Transcripts,
+    IReadOnlyList<ChatMessageView> Chat,
     DashboardView? Dashboard,
     IReadOnlyList<SuggestionView> Suggestions,
     OutboxSnapshot Outbox)
@@ -22,6 +23,7 @@ public sealed record DemoState(
     public static DemoState From(
         CallSession? call,
         IReadOnlyList<TranscriptSegment> transcripts,
+        IReadOnlyList<ChatMessageProjection> chat,
         AgentDashboardProjection? dashboard,
         IReadOnlyList<SuggestionEntry> suggestions,
         OutboxSnapshot outbox)
@@ -29,6 +31,7 @@ public sealed record DemoState(
         return new DemoState(
             CallSummary.From(call),
             transcripts.Select(TranscriptView.From).ToList(),
+            chat.Select(ChatMessageView.From).ToList(),
             DashboardView.From(dashboard),
             suggestions.Select(SuggestionView.From).ToList(),
             outbox);
@@ -62,6 +65,18 @@ public sealed record TranscriptView(
     public static TranscriptView From(TranscriptSegment segment)
     {
         return new TranscriptView(segment.Id, segment.Speaker, segment.Text, segment.ReceivedAt);
+    }
+}
+
+public sealed record ChatMessageView(
+    Guid Id,
+    string Speaker,
+    string Text,
+    DateTimeOffset ReceivedAt)
+{
+    public static ChatMessageView From(ChatMessageProjection entry)
+    {
+        return new ChatMessageView(entry.Id, entry.Speaker, entry.Text, entry.ReceivedAt);
     }
 }
 

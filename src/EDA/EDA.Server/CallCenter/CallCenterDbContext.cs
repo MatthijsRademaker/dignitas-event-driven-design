@@ -9,6 +9,7 @@ public sealed class CallCenterDbContext(DbContextOptions<CallCenterDbContext> op
     public DbSet<AgentDashboardProjection> AgentDashboards => Set<AgentDashboardProjection>();
     public DbSet<SuggestionEntry> Suggestions => Set<SuggestionEntry>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<ChatMessageProjection> ChatMessages => Set<ChatMessageProjection>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -35,5 +36,10 @@ public sealed class CallCenterDbContext(DbContextOptions<CallCenterDbContext> op
 
         modelBuilder.Entity<OutboxMessage>()
             .HasIndex(message => new { message.Status, message.OccurredAt });
+        modelBuilder.Entity<ChatMessageProjection>()
+            .HasKey(message => message.Id);
+
+        modelBuilder.Entity<ChatMessageProjection>()
+            .HasIndex(message => new { message.CallId, message.ReceivedAt });
     }
 }

@@ -30,9 +30,17 @@ type SuggestionView = {
   createdAt: string;
 };
 
+type ChatMessageView = {
+  id: string;
+  speaker: string;
+  text: string;
+  receivedAt: string;
+};
+
 type DemoState = {
   call: CallSummary | null;
   transcripts: TranscriptView[];
+  chat: ChatMessageView[];
   dashboard: DashboardView | null;
   suggestions: SuggestionView[];
   outbox: OutboxSnapshot;
@@ -198,13 +206,8 @@ function App() {
               </span>
             )}
           </div>
-          <div className="meta-card">
-            <span className="meta-label">Write model</span>
-            <span className="meta-value">{consistency?.writeCount ?? 0} segments</span>
-            <span className="meta-sub">Saved transcript rows</span>
-          </div>
           <div className={`meta-card ${consistency?.inSync ? 'meta-card--ok' : 'meta-card--warn'}`}>
-            <span className="meta-label">Read model</span>
+            <span className="meta-label">Agent chat dashboard</span>
             <span className="meta-value">{consistency?.readCount ?? 0} segments</span>
             <span className="meta-sub">
               {consistency?.inSync ? 'Projections are aligned.' : 'Projections are stale.'}
@@ -235,8 +238,7 @@ function App() {
             </button>
           </div>
           <p className="panel__subtitle">
-            Save a transcript segment. Optionally skip publishing to trigger the CQRS
-            inconsistency.
+            Send a transcript segment and watch how the dashboard responds.
           </p>
           <div className="field">
             <label htmlFor="speaker">Speaker</label>
@@ -295,83 +297,55 @@ function App() {
           {notice && (
             <div className={`notice ${notice.published ? 'notice--ok' : 'notice--warn'}`}>
               <span>
-                {notice.published
-                  ? 'Event published. Read model will update shortly.'
-                  : notice.error ?? 'Event publish skipped.'}
+                {notice.published ? 'Transcript sent.' : 'Transcript recorded.'}
               </span>
             </div>
           )}
           {error && <div className="notice notice--error">{error}</div>}
         </section>
-
-        <section className="panel write-panel">
+        <section className="panel chat-panel">
           <div className="panel__header">
-            <h2>Write Model</h2>
-            <span className="panel__meta">{state?.transcripts.length ?? 0} segments</span>
-          </div>
-          <div className="panel__subtitle">Stored transcript segments in Postgres.</div>
-          <div className="timeline">
-            {state?.transcripts.length ? (
-              state.transcripts.map((segment) => (
-                <div key={segment.id} className="timeline-item">
-                  <div className="timeline-time">{formatTime(segment.receivedAt)}</div>
-                  <div className="timeline-body">
-                    <span className="timeline-speaker">{segment.speaker}</span>
-                    <p>{segment.text}</p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="empty">No transcript segments yet.</div>
-            )}
-          </div>
-        </section>
-
-        <section className="panel read-panel">
-          <div className="panel__header">
-            <h2>Read Model</h2>
+            <h2>Agent Chat Dashboard</h2>
             <span className="panel__meta">
               {state?.dashboard ? `Updated ${formatTime(state.dashboard.updatedAt)}` : 'Waiting for events'}
             </span>
           </div>
-          <div className="read-grid">
-            <div className="read-card">
-              <h3>Agent Dashboard</h3>
-              {state?.dashboard ? (
-                <div className="dashboard">
-                  <div>
-                    <span className="label">Last speaker</span>
-                    <span className="value">{state.dashboard.lastSpeaker}</span>
-                  </div>
-                  <div>
-                    <span className="label">Last snippet</span>
-                    <span className="value">{state.dashboard.lastSnippet}</span>
-                  </div>
-                  <div>
-                    <span className="label">Segment count</span>
-                    <span className="value">{state.dashboard.segmentCount}</span>
+          <div className="chat-window">
+            {state?.chat.length ? (
+              state.chat.map((message) => (
+                <div
+                  key={message.id}
+                  className={`chat-message ${message.speaker === 'Agent' ? 'chat-message--agent' : 'chat-message--caller'}`}
+                >
+                  <div className="chat-bubble">
+                    <p>{message.text}</p>
+                    <span className="chat-time">{formatTime(message.receivedAt)}</span>
                   </div>
                 </div>
-              ) : (
-                <div className="empty">No projections yet. Publish an event to update.</div>
-              )}
-            </div>
-            <div className="read-card">
-              <h3>Next Best Actions</h3>
-              {state?.suggestions.length ? (
-                <ul className="suggestions">
-                  {state.suggestions.map((suggestion) => (
-                    <li key={suggestion.id}>
-                      <span className="tag">{suggestion.category}</span>
-                      <span>{suggestion.text}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="empty">Awaiting transcript events.</div>
-              )}
-            </div>
+              ))
+            ) : (
+              <div className="empty">Awaiting transcript events.</div>
+            )}
           </div>
+        </section>
+
+        <section className="panel actions-panel">
+          <div className="panel__header">
+            <h2>Next Best Actions</h2>
+            <span className="panel__meta">AI suggestions</span>
+          </div>
+          {state?.suggestions.length ? (
+            <ul className="suggestions">
+              {state.suggestions.map((suggestion) => (
+                <li key={suggestion.id}>
+                  <span className="tag">{suggestion.category}</span>
+                  <span>{suggestion.text}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="empty">Awaiting transcript events.</div>
+          )}
         </section>
       </main>
     </div>
