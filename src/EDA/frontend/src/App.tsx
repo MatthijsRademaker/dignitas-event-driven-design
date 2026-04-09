@@ -59,7 +59,13 @@ type TranscriptRecordResult = {
   error: string | null;
 };
 
-const quickPhrases = [
+type QuickPhrase = {
+  label: string;
+  text: string;
+  forceFailure?: boolean;
+};
+
+const quickPhrases: QuickPhrase[] = [
   {
     label: 'Refund request',
     text: 'I need a refund for the last charge. It was a mistake.',
@@ -71,6 +77,7 @@ const quickPhrases = [
   {
     label: 'Escalation',
     text: 'I am really frustrated and want to speak with a supervisor.',
+    forceFailure: true,
   },
   {
     label: 'Delivery delay',
@@ -99,6 +106,7 @@ function App() {
   const [text, setText] = useState('');
   const [notice, setNotice] = useState<TranscriptRecordResult | null>(null);
   const [actionPending, setActionPending] = useState(false);
+  const [forcePublishFailure, setForcePublishFailure] = useState(false);
 
   const fetchState = async () => {
     setError(null);
@@ -161,6 +169,23 @@ function App() {
       await fetchState();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to record transcript');
+    } finally {
+      setActionPending(false);
+      setForcePublishFailure(false);
+    }
+  };
+
+  const dispatchOutbox = async () => {
+    setActionPending(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/demo/outbox/dispatch', { method: 'POST' });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      await fetchState();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to dispatch outbox');
     } finally {
       setActionPending(false);
     }
@@ -256,7 +281,10 @@ function App() {
             <textarea
               id="transcript"
               value={text}
-              onChange={(event) => setText(event.target.value)}
+              onChange={(event) => {
+                setText(event.target.value);
+                setForcePublishFailure(false);
+              }}
               placeholder="Type the transcript segment..."
               rows={4}
             />
@@ -267,7 +295,10 @@ function App() {
                 key={phrase.label}
                 type="button"
                 className="chip"
-                onClick={() => setText(phrase.text)}
+                onClick={() => {
+                  setText(phrase.text);
+                  setForcePublishFailure(Boolean(phrase.forceFailure));
+                }}
               >
                 {phrase.label}
               </button>
@@ -277,21 +308,27 @@ function App() {
             <button
               className="primary"
               type="button"
-              onClick={() => submitTranscript(false)}
+              onClick={() => submitTranscript(forcePublishFailure)}
               disabled={actionPending}
             >
-              Save + Publish
-            </button>
-            <button
-              className="danger"
-              type="button"
-              onClick={() => submitTranscript(true)}
-              disabled={actionPending}
-            >
-              Save without Publish
+              Send
             </button>
             <button className="ghost" type="button" onClick={resetDemo} disabled={actionPending}>
               Reset demo
+            </button>
+          </div>
+          <div className="outbox-controls">
+            <div>
+              <span className="meta-label">Outbox pending</span>
+              <span className="meta-value">{state?.outbox.pending ?? 0}</span>
+            </div>
+            <button
+              className="ghost"
+              type="button"
+              onClick={dispatchOutbox}
+              disabled={actionPending || !state?.outbox.pending}
+            >
+              Dispatch pending
             </button>
           </div>
           {notice && (

@@ -19,3 +19,5 @@ Content-Type: application/json
 POST {{Server_HostAddress}}/api/demo/reset
 
 ###
+
+POST {{Server_HostAddress}}/api/demo/outbox/dispatch

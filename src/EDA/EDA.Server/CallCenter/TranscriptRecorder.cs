@@ -50,7 +50,7 @@ public sealed class TranscriptRecorder(CallCenterDbContext db, IPublishEndpoint 
         if (request.SimulatePublishFailure)
         {
             outboxMessage.Attempts = 1;
-            outboxMessage.LastError = "Simulated publish failure: event queued in outbox.";
+            outboxMessage.LastError = "Simulated publish failure.";
             await db.SaveChangesAsync(cancellationToken);
 
             return new TranscriptRecordResult(

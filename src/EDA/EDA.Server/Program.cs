@@ -37,9 +37,9 @@ builder.Services.AddMassTransit(x =>
 });
 
 builder.Services.AddScoped<TranscriptRecorder>();
+builder.Services.AddScoped<OutboxDispatchRunner>();
 builder.Services.AddSingleton<DemoSeeder>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DemoSeeder>());
-builder.Services.AddHostedService<OutboxDispatcher>();
 
 var app = builder.Build();
 
@@ -111,6 +111,12 @@ api.MapPost("transcripts", async (TranscriptRequest request, TranscriptRecorder 
 api.MapPost("reset", async (DemoSeeder seeder, CancellationToken ct) =>
 {
     await seeder.SeedAsync(reset: true, ct);
+    return Results.NoContent();
+});
+
+api.MapPost("outbox/dispatch", async (OutboxDispatchRunner runner, CancellationToken ct) =>
+{
+    await runner.DispatchPendingAsync(ct);
     return Results.NoContent();
 });
 
