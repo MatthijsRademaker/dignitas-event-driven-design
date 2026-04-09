@@ -126,18 +126,6 @@ layout: section
 class: px-12
 ---
 
-# Live Demo Steps
-
-- Save a transcript with “Save without Publish”
-- Compare write model vs dashboard
-- Save another with publish enabled
-
-Branch: `demo-cqrs`
-
----
-class: px-12
----
-
 # What Just Happened
 
 ```mermaid
