@@ -44,7 +44,13 @@ type TranscriptRecordResult = {
   error: string | null;
 };
 
-const quickPhrases = [
+type QuickPhrase = {
+  label: string;
+  text: string;
+  forceFailure?: boolean;
+};
+
+const quickPhrases: QuickPhrase[] = [
   {
     label: 'Refund request',
     text: 'I need a refund for the last charge. It was a mistake.',
@@ -56,6 +62,7 @@ const quickPhrases = [
   {
     label: 'Escalation',
     text: 'I am really frustrated and want to speak with a supervisor.',
+    forceFailure: true,
   },
   {
     label: 'Delivery delay',
@@ -84,6 +91,7 @@ function App() {
   const [text, setText] = useState('');
   const [notice, setNotice] = useState<TranscriptRecordResult | null>(null);
   const [actionPending, setActionPending] = useState(false);
+  const [forcePublishFailure, setForcePublishFailure] = useState(false);
 
   const fetchState = async () => {
     setError(null);
@@ -148,6 +156,7 @@ function App() {
       setError(err instanceof Error ? err.message : 'Failed to record transcript');
     } finally {
       setActionPending(false);
+      setForcePublishFailure(false);
     }
   };
 
@@ -234,7 +243,10 @@ function App() {
             <textarea
               id="transcript"
               value={text}
-              onChange={(event) => setText(event.target.value)}
+              onChange={(event) => {
+                setText(event.target.value);
+                setForcePublishFailure(false);
+              }}
               placeholder="Type the transcript segment..."
               rows={4}
             />
@@ -245,7 +257,10 @@ function App() {
                 key={phrase.label}
                 type="button"
                 className="chip"
-                onClick={() => setText(phrase.text)}
+                onClick={() => {
+                  setText(phrase.text);
+                  setForcePublishFailure(Boolean(phrase.forceFailure));
+                }}
               >
                 {phrase.label}
               </button>
@@ -255,18 +270,10 @@ function App() {
             <button
               className="primary"
               type="button"
-              onClick={() => submitTranscript(false)}
+              onClick={() => submitTranscript(forcePublishFailure)}
               disabled={actionPending}
             >
-              Save + Publish
-            </button>
-            <button
-              className="danger"
-              type="button"
-              onClick={() => submitTranscript(true)}
-              disabled={actionPending}
-            >
-              Save without Publish
+              Send
             </button>
             <button className="ghost" type="button" onClick={resetDemo} disabled={actionPending}>
               Reset demo
@@ -285,26 +292,31 @@ function App() {
         </section>
 
         <section className="panel write-panel">
-          <div className="panel__header">
-            <h2>Write Model</h2>
-            <span className="panel__meta">{state?.transcripts.length ?? 0} segments</span>
-          </div>
-          <div className="panel__subtitle">Stored transcript segments in Postgres.</div>
-          <div className="timeline">
-            {state?.transcripts.length ? (
-              state.transcripts.map((segment) => (
-                <div key={segment.id} className="timeline-item">
-                  <div className="timeline-time">{formatTime(segment.receivedAt)}</div>
-                  <div className="timeline-body">
-                    <span className="timeline-speaker">{segment.speaker}</span>
-                    <p>{segment.text}</p>
+          <details>
+            <summary className="panel__header">
+              <div>
+                <h2>Write Model</h2>
+                <span className="panel__meta">{state?.transcripts.length ?? 0} segments</span>
+              </div>
+              <span className="panel__toggle" aria-hidden="true" />
+            </summary>
+            <div className="panel__subtitle">Stored transcript segments in Postgres.</div>
+            <div className="timeline">
+              {state?.transcripts.length ? (
+                state.transcripts.map((segment) => (
+                  <div key={segment.id} className="timeline-item">
+                    <div className="timeline-time">{formatTime(segment.receivedAt)}</div>
+                    <div className="timeline-body">
+                      <span className="timeline-speaker">{segment.speaker}</span>
+                      <p>{segment.text}</p>
+                    </div>
                   </div>
-                </div>
-              ))
-            ) : (
-              <div className="empty">No transcript segments yet.</div>
-            )}
-          </div>
+                ))
+              ) : (
+                <div className="empty">No transcript segments yet.</div>
+              )}
+            </div>
+          </details>
         </section>
 
         <section className="panel read-panel">

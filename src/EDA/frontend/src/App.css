@@ -136,6 +136,12 @@
   gap: 12px;
 }
 
+.panel__header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .panel__header h2 {
   margin: 0;
   font-size: 1.2rem;
@@ -145,6 +151,38 @@
 .panel__meta {
   font-size: 0.85rem;
   color: var(--ink-muted);
+}
+
+.write-panel details {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.write-panel summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.write-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.panel__toggle {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+.panel__toggle::after {
+  content: "Expand";
+}
+
+.write-panel details[open] .panel__toggle::after {
+  content: "Collapse";
 }
 
 .panel__subtitle {
