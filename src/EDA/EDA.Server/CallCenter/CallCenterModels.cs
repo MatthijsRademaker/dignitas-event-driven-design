@@ -47,3 +47,13 @@ public sealed class OutboxMessage
     public string? LastError { get; set; }
     public DateTimeOffset? PublishedAt { get; set; }
 }
+
+public sealed class ChatMessageProjection
+{
+    public Guid Id { get; set; }
+    public Guid CallId { get; set; }
+    public Guid SegmentId { get; set; }
+    public string Speaker { get; set; } = string.Empty;
+    public string Text { get; set; } = string.Empty;
+    public DateTimeOffset ReceivedAt { get; set; }
+}
