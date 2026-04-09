@@ -6,19 +6,26 @@ namespace EDA.Server.CallCenter;
 
 public sealed class TranscriptRecorder(CallCenterDbContext db, IPublishEndpoint publishEndpoint)
 {
-    public async Task<TranscriptRecordResult?> RecordAsync(TranscriptRequest request, CancellationToken cancellationToken)
+    public async Task<TranscriptRecordResult?> RecordAsync(
+        TranscriptRequest request,
+        CancellationToken cancellationToken
+    )
     {
         var callId = request.CallId ?? DemoIds.ActiveCallId;
 
-        var callExists = await db.CallSessions
-            .AnyAsync(call => call.Id == callId, cancellationToken);
+        var callExists = await db.CallSessions.AnyAsync(
+            call => call.Id == callId,
+            cancellationToken
+        );
 
         if (!callExists)
         {
             return null;
         }
 
-        var speaker = string.IsNullOrWhiteSpace(request.Speaker) ? "Caller" : request.Speaker.Trim();
+        var speaker = string.IsNullOrWhiteSpace(request.Speaker)
+            ? "Caller"
+            : request.Speaker.Trim();
         var text = request.Text.Trim();
 
         var segment = new TranscriptSegment
@@ -27,24 +34,27 @@ public sealed class TranscriptRecorder(CallCenterDbContext db, IPublishEndpoint 
             CallId = callId,
             Speaker = speaker,
             Text = text,
-            ReceivedAt = DateTimeOffset.UtcNow
+            ReceivedAt = DateTimeOffset.UtcNow,
         };
 
         db.TranscriptSegments.Add(segment);
         await db.SaveChangesAsync(cancellationToken);
 
+        // TODO: In a real application, you might want to handle publish failures more robustly
         if (request.SimulatePublishFailure)
         {
             return new TranscriptRecordResult(
                 callId,
                 segment.Id,
                 Published: false,
-                Error: "Simulated publish failure.");
+                Error: "Simulated publish failure."
+            );
         }
 
         await publishEndpoint.Publish(
             new TranscriptReceived(callId, segment.Id, speaker, text, segment.ReceivedAt),
-            cancellationToken);
+            cancellationToken
+        );
 
         return new TranscriptRecordResult(callId, segment.Id, Published: true, Error: null);
     }
