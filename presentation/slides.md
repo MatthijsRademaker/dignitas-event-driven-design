@@ -206,12 +206,13 @@ class: px-6
 
 ```mermaid
 stateDiagram-v2
-    [*] --> CallAccepted
-    CallAccepted --> TranscriptStreaming
-    TranscriptStreaming --> ResolutionDrafted
-    ResolutionDrafted --> CustomerConfirmationRequested
-    CustomerConfirmationRequested --> CallResolved
-    CustomerConfirmationRequested --> FollowUpScheduled: CallerDisconnected
+    direction LR
+    [*] --> InProgress: CallStarted
+    InProgress --> InProgress: TranscriptStreaming
+    InProgress --> OnHold: CallHeld
+    OnHold --> OnHold: TranscriptStreaming (ignored)
+    OnHold --> InProgress: CallResumed
+    InProgress --> Ended: CallEnded
 ```
 
 ---
@@ -224,14 +225,14 @@ layout: section
 class: px-12
 ---
 
-# Exercise 2: Handle Duplicate CallAccepted
+# Exercise 2: Ignore Transcripts on Hold
 
-Build a saga that handles multiple `CallAccepted` events gracefully.
+Build a saga that pauses transcript handling while the call is on hold.
 
 Done when:
-- No duplicate saga instances
-- Duplicate events are idempotent
-- Telemetry shows why a duplicate was ignored
+- Call enters `OnHold` on `CallHeld`
+- `TranscriptStreaming` is ignored during hold
+- Processing resumes on `CallResumed`
 
 Branch: `exercise-2-saga`
 
@@ -288,23 +289,6 @@ class: px-12
 - Symptom: two active conversations for one agent
 - Telemetry: duplicate CallAccepted from retry loop
 - Fix: saga idempotency + correlation guard
-
----
-layout: section
----
-
-# Wrap-Up
-
----
-class: px-12
----
-
-# Key Takeaways
-
-- Model failures explicitly (CQRS demo)
-- Use outbox when write + publish must survive together
-- Use sagas when workflow state matters
-- Telemetry is part of the design, not an afterthought
 
 ---
 class: text-center
