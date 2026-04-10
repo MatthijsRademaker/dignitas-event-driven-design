@@ -6,6 +6,23 @@ public sealed record TranscriptRequest(
     string Text,
     bool SimulatePublishFailure);
 
+public sealed record CallStartRequest(Guid? CallId);
+
+public sealed record TranscriptStreamRequest(
+    Guid? CallId,
+    string Speaker,
+    string Text);
+
+public sealed record CallHoldRequest(
+    Guid? CallId,
+    string? Reason);
+
+public sealed record CallResumeRequest(Guid? CallId);
+
+public sealed record CallHangupRequest(
+    Guid? CallId,
+    string? Reason);
+
 public sealed record TranscriptRecordResult(
     Guid CallId,
     Guid SegmentId,

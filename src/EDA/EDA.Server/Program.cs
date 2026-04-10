@@ -1,5 +1,7 @@
 using EDA.Server.CallCenter;
 using EDA.Server.CallCenter.Consumers;
+using EDA.Server.CallCenter.Contracts;
+using EDA.Server.CallCenter.Sagas;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,6 +20,8 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumer<ChatProjector>();
     x.AddConsumer<DashboardProjector>();
     x.AddConsumer<SuggestionProjector>();
+    x.AddSagaStateMachine<CallResolutionSaga, CallResolutionState>()
+        .InMemoryRepository();
 
     x.UsingRabbitMq((context, cfg) =>
     {
@@ -106,6 +110,130 @@ api.MapPost("transcripts", async (TranscriptRequest request, TranscriptRecorder 
     return result is null
         ? Results.NotFound(new { message = "Call not found." })
         : Results.Ok(result);
+});
+
+var saga = api.MapGroup("saga");
+
+saga.MapPost("start", async (
+    CallStartRequest request,
+    CallCenterDbContext db,
+    IPublishEndpoint publishEndpoint,
+    CancellationToken ct) =>
+{
+    var callId = request.CallId ?? DemoIds.ActiveCallId;
+    var call = await db.CallSessions
+        .AsNoTracking()
+        .FirstOrDefaultAsync(session => session.Id == callId, ct);
+
+    if (call is null)
+    {
+        return Results.NotFound(new { message = "Call not found." });
+    }
+
+    var started = new CallStarted(call.Id, call.AgentName, call.CallerName, call.StartedAt);
+    await publishEndpoint.Publish(started, ct);
+    return Results.Ok(started);
+});
+
+saga.MapPost("stream", async (
+    TranscriptStreamRequest request,
+    CallCenterDbContext db,
+    IPublishEndpoint publishEndpoint,
+    CancellationToken ct) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Text))
+    {
+        return Results.BadRequest(new { message = "Transcript text is required." });
+    }
+
+    var callId = request.CallId ?? DemoIds.ActiveCallId;
+    var callExists = await db.CallSessions
+        .AsNoTracking()
+        .AnyAsync(session => session.Id == callId, ct);
+
+    if (!callExists)
+    {
+        return Results.NotFound(new { message = "Call not found." });
+    }
+
+    var speaker = string.IsNullOrWhiteSpace(request.Speaker) ? "Caller" : request.Speaker.Trim();
+    var text = request.Text.Trim();
+    var streaming = new TranscriptStreaming(callId, Guid.NewGuid(), speaker, text, DateTimeOffset.UtcNow);
+
+    await publishEndpoint.Publish(streaming, ct);
+    return Results.Ok(streaming);
+});
+
+saga.MapPost("hold", async (
+    CallHoldRequest request,
+    CallCenterDbContext db,
+    IPublishEndpoint publishEndpoint,
+    CancellationToken ct) =>
+{
+    var callId = request.CallId ?? DemoIds.ActiveCallId;
+    var callExists = await db.CallSessions
+        .AsNoTracking()
+        .AnyAsync(session => session.Id == callId, ct);
+
+    if (!callExists)
+    {
+        return Results.NotFound(new { message = "Call not found." });
+    }
+
+    var reason = string.IsNullOrWhiteSpace(request.Reason)
+        ? "Caller placed on hold."
+        : request.Reason.Trim();
+    var held = new CallHeld(callId, DateTimeOffset.UtcNow, reason);
+
+    await publishEndpoint.Publish(held, ct);
+    return Results.Ok(held);
+});
+
+saga.MapPost("resume", async (
+    CallResumeRequest request,
+    CallCenterDbContext db,
+    IPublishEndpoint publishEndpoint,
+    CancellationToken ct) =>
+{
+    var callId = request.CallId ?? DemoIds.ActiveCallId;
+    var callExists = await db.CallSessions
+        .AsNoTracking()
+        .AnyAsync(session => session.Id == callId, ct);
+
+    if (!callExists)
+    {
+        return Results.NotFound(new { message = "Call not found." });
+    }
+
+    var resumed = new CallResumed(callId, DateTimeOffset.UtcNow);
+
+    await publishEndpoint.Publish(resumed, ct);
+    return Results.Ok(resumed);
+});
+
+saga.MapPost("hangup", async (
+    CallHangupRequest request,
+    CallCenterDbContext db,
+    IPublishEndpoint publishEndpoint,
+    CancellationToken ct) =>
+{
+    var callId = request.CallId ?? DemoIds.ActiveCallId;
+    var callExists = await db.CallSessions
+        .AsNoTracking()
+        .AnyAsync(session => session.Id == callId, ct);
+
+    if (!callExists)
+    {
+        return Results.NotFound(new { message = "Call not found." });
+    }
+
+    var reason = string.IsNullOrWhiteSpace(request.Reason)
+        ? "Caller ended the call."
+        : request.Reason.Trim();
+    var ended = new CallEnded(callId, DateTimeOffset.UtcNow, reason);
+
+    await publishEndpoint.Publish(ended, ct);
+    return Results.Ok(ended);
 });
 
 api.MapPost("reset", async (DemoSeeder seeder, CancellationToken ct) =>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import './App.css';
 
 type CallSummary = {
@@ -9,57 +9,25 @@ type CallSummary = {
   startedAt: string;
 };
 
-type TranscriptView = {
-  id: string;
-  speaker: string;
-  text: string;
-  receivedAt: string;
-};
-
-type DashboardView = {
-  lastSpeaker: string;
-  lastSnippet: string;
-  segmentCount: number;
-  updatedAt: string;
-};
-
-type SuggestionView = {
-  id: string;
-  text: string;
-  category: string;
-  createdAt: string;
-};
-
-type ChatMessageView = {
-  id: string;
-  speaker: string;
-  text: string;
-  receivedAt: string;
-};
-
 type DemoState = {
   call: CallSummary | null;
-  transcripts: TranscriptView[];
-  chat: ChatMessageView[];
-  dashboard: DashboardView | null;
-  suggestions: SuggestionView[];
-  outbox: OutboxSnapshot;
 };
 
-type OutboxSnapshot = {
-  pending: number;
-  published: number;
-  failed: number;
+type SagaPhase = 'Idle' | 'In Progress' | 'On Hold' | 'Ended';
+
+type EventEntry = {
+  id: string;
+  label: string;
+  detail?: string;
+  at: string;
 };
 
-type TranscriptRecordResult = {
-  callId: string;
-  segmentId: string;
-  published: boolean;
-  error: string | null;
+type QuickPhrase = {
+  label: string;
+  text: string;
 };
 
-const quickPhrases = [
+const quickPhrases: QuickPhrase[] = [
   {
     label: 'Refund request',
     text: 'I need a refund for the last charge. It was a mistake.',
@@ -78,6 +46,15 @@ const quickPhrases = [
   },
 ];
 
+const exerciseSteps = [
+  'Start the call to initialize the saga.',
+  'Say something to emit a transcript event.',
+  'Place the call on hold, then say something again.',
+  'Implement the saga rule that ignores transcripts while on hold.',
+  'Resume the call and confirm transcripts are processed again.',
+  'Hang up to end the saga run.',
+];
+
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString(undefined, {
     hour: '2-digit',
@@ -91,14 +68,17 @@ const formatDateTime = (iso: string) =>
     minute: '2-digit',
   });
 
+const createEntryId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
 function App() {
   const [state, setState] = useState<DemoState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [speaker, setSpeaker] = useState<'Caller' | 'Agent'>('Caller');
   const [text, setText] = useState('');
-  const [notice, setNotice] = useState<TranscriptRecordResult | null>(null);
   const [actionPending, setActionPending] = useState(false);
+  const [callPhase, setCallPhase] = useState<SagaPhase>('Idle');
+  const [eventLog, setEventLog] = useState<EventEntry[]>([]);
 
   const fetchState = async () => {
     setError(null);
@@ -118,36 +98,33 @@ function App() {
 
   useEffect(() => {
     fetchState();
-    const timer = window.setInterval(fetchState, 4000);
+    const timer = window.setInterval(fetchState, 6000);
     return () => window.clearInterval(timer);
   }, []);
 
-  const consistency = useMemo(() => {
-    if (!state) return null;
-    const writeCount = state.transcripts.length;
-    const readCount = state.dashboard?.segmentCount ?? 0;
-    const inSync = writeCount === readCount;
-    return { writeCount, readCount, inSync };
-  }, [state]);
+  const logEvent = (label: string, detail?: string) => {
+    const entry: EventEntry = {
+      id: createEntryId(),
+      label,
+      detail,
+      at: new Date().toISOString(),
+    };
+    setEventLog((prev) => [entry, ...prev].slice(0, 12));
+  };
 
-  const submitTranscript = async (simulatePublishFailure: boolean) => {
-    if (!text.trim()) {
-      setError('Transcript text is required.');
-      return;
-    }
-
+  const requestSaga = async (
+    path: string,
+    body: Record<string, unknown>,
+    onSuccess: () => void,
+    failureMessage: string,
+  ) => {
     setActionPending(true);
     setError(null);
     try {
-      const response = await fetch('/api/demo/transcripts', {
+      const response = await fetch(`/api/demo/saga/${path}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          callId: state?.call?.id ?? null,
-          speaker,
-          text,
-          simulatePublishFailure,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -155,42 +132,100 @@ function App() {
         throw new Error(message?.message ?? `HTTP ${response.status}`);
       }
 
-      const result: TranscriptRecordResult = await response.json();
-      setNotice(result);
-      setText('');
+      await response.json().catch(() => null);
+      onSuccess();
       await fetchState();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to record transcript');
+      setError(err instanceof Error ? err.message : failureMessage);
     } finally {
       setActionPending(false);
     }
   };
 
-  const resetDemo = async () => {
-    setActionPending(true);
-    setNotice(null);
-    setError(null);
-    try {
-      const response = await fetch('/api/demo/reset', { method: 'POST' });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      await fetchState();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reset demo');
-    } finally {
-      setActionPending(false);
+  const startCall = () =>
+    requestSaga(
+      'start',
+      { callId: state?.call?.id ?? null },
+      () => {
+        setCallPhase('In Progress');
+        logEvent('CallStarted', 'Saga initialized for the active call.');
+      },
+      'Failed to start saga',
+    );
+
+  const holdCall = () =>
+    requestSaga(
+      'hold',
+      { callId: state?.call?.id ?? null, reason: 'Agent placed the caller on hold.' },
+      () => {
+        setCallPhase('On Hold');
+        logEvent('CallerHeld', 'Call placed on hold.');
+      },
+      'Failed to place call on hold',
+    );
+
+  const resumeCall = () =>
+    requestSaga(
+      'resume',
+      { callId: state?.call?.id ?? null },
+      () => {
+        setCallPhase('In Progress');
+        logEvent('CallerResumed', 'Call resumed from hold.');
+      },
+      'Failed to resume call',
+    );
+
+  const hangupCall = () =>
+    requestSaga(
+      'hangup',
+      { callId: state?.call?.id ?? null, reason: 'Caller ended the call.' },
+      () => {
+        setCallPhase('Ended');
+        logEvent('CallEnded', 'Call ended and saga completed.');
+      },
+      'Failed to end call',
+    );
+
+  const streamTranscript = () => {
+    if (!text.trim()) {
+      setError('Transcript text is required.');
+      return;
     }
+
+    requestSaga(
+      'stream',
+      {
+        callId: state?.call?.id ?? null,
+        speaker,
+        text,
+      },
+      () => {
+        logEvent('TranscriptStreaming', `${speaker}: ${text.trim()}`);
+        setText('');
+      },
+      'Failed to stream transcript',
+    );
   };
+
+  const clearLog = () => setEventLog([]);
+
+  const lastEvent = eventLog[0];
+  const eventCount = eventLog.length;
+
+  const canStart = callPhase === 'Idle' && !actionPending;
+  const canHold = callPhase === 'In Progress' && !actionPending;
+  const canResume = callPhase === 'On Hold' && !actionPending;
+  const canHangup = (callPhase === 'In Progress' || callPhase === 'On Hold') && !actionPending;
+  const canSpeak = callPhase !== 'Idle' && callPhase !== 'Ended' && !actionPending;
 
   return (
     <div className="app">
       <header className="hero">
         <div className="hero__eyebrow">Event-driven architecture lab</div>
-        <h1>Call Center CQRS Inconsistency</h1>
+        <h1>Call Resolution Saga</h1>
         <p>
-          Record transcript segments, then watch the write model move ahead of the read model
-          when the event publish step is skipped.
+          Publish saga events with the call controls, then implement the state machine rule that ignores
+          transcript events while the call is on hold.
         </p>
         <div className="hero__meta">
           <div className="meta-card">
@@ -198,7 +233,9 @@ function App() {
             <span className="meta-value">
               {state?.call
                 ? `${state.call.callerName} with ${state.call.agentName}`
-                : 'Loading call...'}
+                : loading
+                  ? 'Loading call...'
+                  : 'No active call'}
             </span>
             {state?.call && (
               <span className="meta-sub">
@@ -206,25 +243,19 @@ function App() {
               </span>
             )}
           </div>
-          <div className={`meta-card ${consistency?.inSync ? 'meta-card--ok' : 'meta-card--warn'}`}>
-            <span className="meta-label">Agent chat dashboard</span>
-            <span className="meta-value">{consistency?.readCount ?? 0} segments</span>
+          <div className="meta-card">
+            <span className="meta-label">Saga phase</span>
+            <span className="meta-value">{callPhase}</span>
             <span className="meta-sub">
-              {consistency?.inSync ? 'Projections are aligned.' : 'Projections are stale.'}
+              {lastEvent ? `Last event: ${lastEvent.label}` : 'No events published yet.'}
             </span>
           </div>
           <div className="meta-card">
-            <span className="meta-label">Outbox</span>
-            <span className="meta-value">
-              {state?.outbox
-                ? `${state.outbox.pending} pending`
-                : 'Loading...'}
+            <span className="meta-label">Event log</span>
+            <span className="meta-value">{eventCount} events</span>
+            <span className="meta-sub">
+              {lastEvent ? `Most recent at ${formatTime(lastEvent.at)}` : 'Waiting for saga events.'}
             </span>
-            {state?.outbox && (
-              <span className="meta-sub">
-                {state.outbox.published} published · {state.outbox.failed} failed
-              </span>
-            )}
           </div>
         </div>
       </header>
@@ -232,14 +263,29 @@ function App() {
       <main className="grid">
         <section className="panel control-panel">
           <div className="panel__header">
-            <h2>Transcript Input</h2>
+            <h2>Call Controls</h2>
             <button className="ghost" type="button" onClick={fetchState} disabled={loading}>
               Refresh state
             </button>
           </div>
           <p className="panel__subtitle">
-            Send a transcript segment and watch how the dashboard responds.
+            Use the call actions to drive the saga. You can publish transcript events even while on hold
+            to verify they are ignored.
           </p>
+          <div className="action-row">
+            <button className="primary" type="button" onClick={startCall} disabled={!canStart}>
+              Start call
+            </button>
+            <button className="ghost" type="button" onClick={holdCall} disabled={!canHold}>
+              Hold
+            </button>
+            <button className="ghost" type="button" onClick={resumeCall} disabled={!canResume}>
+              Resume
+            </button>
+            <button className="danger" type="button" onClick={hangupCall} disabled={!canHangup}>
+              Hang up
+            </button>
+          </div>
           <div className="field">
             <label htmlFor="speaker">Speaker</label>
             <select
@@ -274,79 +320,47 @@ function App() {
             ))}
           </div>
           <div className="action-row">
-            <button
-              className="primary"
-              type="button"
-              onClick={() => submitTranscript(false)}
-              disabled={actionPending}
-            >
-              Save + Publish
-            </button>
-            <button
-              className="danger"
-              type="button"
-              onClick={() => submitTranscript(true)}
-              disabled={actionPending}
-            >
-              Save without Publish
-            </button>
-            <button className="ghost" type="button" onClick={resetDemo} disabled={actionPending}>
-              Reset demo
+            <button className="primary" type="button" onClick={streamTranscript} disabled={!canSpeak}>
+              Say something
             </button>
           </div>
-          {notice && (
-            <div className={`notice ${notice.published ? 'notice--ok' : 'notice--warn'}`}>
-              <span>
-                {notice.published ? 'Transcript sent.' : 'Transcript recorded.'}
-              </span>
-            </div>
-          )}
           {error && <div className="notice notice--error">{error}</div>}
         </section>
 
-        <section className="panel chat-panel">
+        <section className="panel log-panel">
           <div className="panel__header">
-            <h2>Agent Chat Dashboard</h2>
-            <span className="panel__meta">
-              {state?.dashboard ? `Updated ${formatTime(state.dashboard.updatedAt)}` : 'Waiting for events'}
-            </span>
+            <h2>Saga Event Log</h2>
+            <button className="ghost" type="button" onClick={clearLog} disabled={!eventLog.length}>
+              Clear log
+            </button>
           </div>
-          <div className="chat-window">
-            {state?.chat.length ? (
-              state.chat.map((message) => (
-                <div
-                  key={message.id}
-                  className={`chat-message ${message.speaker === 'Agent' ? 'chat-message--agent' : 'chat-message--caller'}`}
-                >
-                  <div className="chat-bubble">
-                    <p>{message.text}</p>
-                    <span className="chat-time">{formatTime(message.receivedAt)}</span>
+          {eventLog.length ? (
+            <div className="timeline">
+              {eventLog.map((event) => (
+                <div key={event.id} className="timeline-item">
+                  <div className="timeline-time">{formatTime(event.at)}</div>
+                  <div className="timeline-body">
+                    <span className="timeline-speaker">{event.label}</span>
+                    {event.detail && <p>{event.detail}</p>}
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="empty">Awaiting transcript events.</div>
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty">No saga events yet.</div>
+          )}
         </section>
 
-        <section className="panel actions-panel">
+        <section className="panel flow-panel">
           <div className="panel__header">
-            <h2>Next Best Actions</h2>
-            <span className="panel__meta">AI suggestions</span>
+            <h2>Exercise Flow</h2>
+            <span className="panel__meta">Guided scenario</span>
           </div>
-          {state?.suggestions.length ? (
-            <ul className="suggestions">
-              {state.suggestions.map((suggestion) => (
-                <li key={suggestion.id}>
-                  <span className="tag">{suggestion.category}</span>
-                  <span>{suggestion.text}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="empty">Awaiting transcript events.</div>
-          )}
+          <ol className="flow-list">
+            {exerciseSteps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
         </section>
       </main>
     </div>
