@@ -32,21 +32,6 @@ class: px-12
 - Call lifecycle events update the UI in near real time
 
 ---
-class: px-6
----
-
-# Aimy Flow (Short)
-
-```mermaid
-flowchart LR
-    UI[Agent UI] --> API[Call Center API]
-    API --> DB[(Postgres)]
-    API --> Bus[Message Bus]
-    Bus --> Proj[Read Models]
-    Proj --> UI
-```
-
----
 layout: section
 ---
 
@@ -83,6 +68,20 @@ layout: section
 class: px-12
 ---
 
+# CQRS in One Minute
+
+| Concern | Write Model | Read Model |
+| --- | --- | --- |
+| Purpose | Enforce invariants | Serve queries fast |
+| Storage | Normalized | Denormalized |
+| Updated by | Commands | Events / projections |
+| Consistency | Immediate | Eventual |
+
+When the read model updates via events, consistency becomes eventual.
+---
+class: px-12
+---
+
 # Events vs Commands vs Queries
 
 | Type | Meaning | Example |
@@ -99,22 +98,8 @@ class: px-12
 
 - Events carry facts, not full documents
 - Queries resolve data for the UI shape
-- Projections are for representation, not invariants
+- Projections are for representation
 
----
-class: px-12
----
-
-# CQRS in One Minute
-
-| Concern | Write Model | Read Model |
-| --- | --- | --- |
-| Purpose | Enforce invariants | Serve queries fast |
-| Storage | Normalized | Denormalized |
-| Updated by | Commands | Events / projections |
-| Consistency | Immediate | Eventual |
-
-When the read model updates via events, consistency becomes eventual.
 
 ---
 layout: section
